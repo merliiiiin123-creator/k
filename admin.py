@@ -2,7 +2,7 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
-
+ 
 from config import ADMIN_IDS
 from states.forms import AdminNote
 from keyboards.menus import admin_main_menu, admin_review_keyboard, close_ticket_keyboard
@@ -13,9 +13,9 @@ from database.db import (
     get_pending_partners, update_partner_status,
     get_open_tickets, close_ticket,
 )
-
+ 
 router = Router()
-
+ 
 APP_CONFIG = {
     "kol": {
         "get_pending": get_pending_kols,
@@ -93,13 +93,13 @@ APP_CONFIG = {
         ),
     },
 }
-
-
+ 
+ 
 def is_admin(uid): return uid in ADMIN_IDS
-
-
+ 
+ 
 # ─── Admin Entry ───────────────────────────────────────────────────────────────
-
+ 
 @router.message(Command("admin"))
 async def admin_panel(message: Message):
     if not is_admin(message.from_user.id):
@@ -109,17 +109,17 @@ async def admin_panel(message: Message):
         parse_mode="Markdown",
         reply_markup=admin_main_menu()
     )
-
-
+ 
+ 
 # ─── List Applications ─────────────────────────────────────────────────────────
-
+ 
 @router.callback_query(F.data.startswith("adm:list:"))
 async def admin_list(callback: CallbackQuery):
     if not is_admin(callback.from_user.id):
         return
-
+ 
     queue = callback.data.split(":")[-1]
-
+ 
     if queue == "tickets":
         tickets = await get_open_tickets()
         if not tickets:
@@ -136,11 +136,11 @@ async def admin_list(callback: CallbackQuery):
             )
             await callback.message.answer(text, parse_mode="Markdown", reply_markup=close_ticket_keyboard(t['id']))
         return
-
+ 
     cfg = APP_CONFIG.get(queue)
     if not cfg:
         return
-
+ 
     apps = await cfg["get_pending"]()
     if not apps:
         await callback.message.edit_text(
@@ -148,7 +148,7 @@ async def admin_list(callback: CallbackQuery):
             reply_markup=admin_main_menu()
         )
         return
-
+ 
     await callback.message.edit_text(
         f"{cfg['emoji']} *{len(apps)} Pending {cfg['label']} Application(s)*",
         parse_mode="Markdown"
@@ -159,10 +159,10 @@ async def admin_list(callback: CallbackQuery):
             parse_mode="Markdown",
             reply_markup=admin_review_keyboard(queue, app["user_id"])
         )
-
-
+ 
+ 
 # ─── Approve ───────────────────────────────────────────────────────────────────
-
+ 
 @router.callback_query(F.data.startswith("adm:approve:"))
 async def admin_approve(callback: CallbackQuery, bot: Bot):
     if not is_admin(callback.from_user.id):
@@ -170,11 +170,11 @@ async def admin_approve(callback: CallbackQuery, bot: Bot):
     _, _, app_type, user_id_str = callback.data.split(":")
     user_id = int(user_id_str)
     cfg = APP_CONFIG[app_type]
-
+ 
     await cfg["update_status"](user_id, "approved")
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.message.answer(f"✅ {cfg['label']} application for `{user_id}` approved.", parse_mode="Markdown")
-
+ 
     approval_msgs = {
         "kol":      "🎉 *Congratulations!* You've been approved as a *Kraven KOL*!\n\nOur team will be in touch with your onboarding details shortly.",
         "project":  "🎉 *Great news!* Your project application has been *approved by Kraven*!\n\nExpect an email from our team within 24 hours to discuss next steps.",
@@ -185,10 +185,10 @@ async def admin_approve(callback: CallbackQuery, bot: Bot):
         await bot.send_message(user_id, approval_msgs[app_type], parse_mode="Markdown")
     except Exception:
         await callback.message.answer(f"⚠️ Could not DM user `{user_id}`.", parse_mode="Markdown")
-
-
+ 
+ 
 # ─── Reject ────────────────────────────────────────────────────────────────────
-
+ 
 @router.callback_query(F.data.startswith("adm:reject:"))
 async def admin_reject_start(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
@@ -200,8 +200,8 @@ async def admin_reject_start(callback: CallbackQuery, state: FSMContext):
         "✏️ Enter a *rejection note* for the applicant _(or /skip for no note)_:",
         parse_mode="Markdown"
     )
-
-
+ 
+ 
 @router.message(AdminNote.waiting)
 async def admin_reject_note(message: Message, state: FSMContext, bot: Bot):
     if not is_admin(message.from_user.id):
@@ -211,11 +211,11 @@ async def admin_reject_note(message: Message, state: FSMContext, bot: Bot):
     app_type = data["app_type"]
     note = "" if message.text == "/skip" else message.text.strip()
     cfg = APP_CONFIG[app_type]
-
+ 
     await cfg["update_status"](user_id, "rejected", note)
     await state.clear()
     await message.answer(f"❌ {cfg['label']} application for `{user_id}` rejected.", parse_mode="Markdown")
-
+ 
     rejection_msg = (
         f"❌ *Your {cfg['label']} application was not approved at this time.*\n\n"
         + (f"📝 *Reason:* {note}\n\n" if note else "")
@@ -225,10 +225,10 @@ async def admin_reject_note(message: Message, state: FSMContext, bot: Bot):
         await bot.send_message(user_id, rejection_msg, parse_mode="Markdown")
     except Exception:
         await message.answer(f"⚠️ Could not DM user `{user_id}`.", parse_mode="Markdown")
-
-
+ 
+ 
 # ─── Close Ticket ──────────────────────────────────────────────────────────────
-
+ 
 @router.callback_query(F.data.startswith("adm:close_ticket:"))
 async def admin_close_ticket(callback: CallbackQuery):
     if not is_admin(callback.from_user.id):
@@ -237,3 +237,4 @@ async def admin_close_ticket(callback: CallbackQuery):
     await close_ticket(ticket_id)
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.message.answer(f"✅ Ticket #{ticket_id} closed.")
+ 
