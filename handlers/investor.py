@@ -18,11 +18,12 @@ def _p(step): return f"_(Step {step} of {TOTAL_STEPS})_"
 async def cat_investor(callback: CallbackQuery, state: FSMContext):
     await state.set_state(InvestorForm.motivation)
     await callback.message.edit_text(
-        "💰 *Investor Application*\n\n"
-        "We're glad you're considering investing in Kraven. "
-        "Let's learn more about your goals.\n\n"
-        f"{_p(1)} What is your *primary motivation* for considering an investment in Kraven?\n\n"
-        "_(Please describe in a few sentences — e.g. long-term value, ecosystem alignment, strategic partnership, etc.)_",
+        "💰 *Invest in Kraven*\n\n"
+        "Kraven is building the distribution layer for the next wave of Web3 growth — "
+        "connecting projects, creators, and capital in one ecosystem.\n\n"
+        "If you're looking to back something with *real infrastructure* and a "
+        "growing network of KOLs and projects, let's talk.\n\n"
+        f"{_p(1)} What's drawing you to Kraven? Tell us about your *investment thesis*.",
         parse_mode="Markdown"
     )
 
@@ -30,14 +31,13 @@ async def cat_investor(callback: CallbackQuery, state: FSMContext):
 @router.message(InvestorForm.motivation)
 async def inv_step1(message: Message, state: FSMContext):
     if len(message.text.strip()) < 10:
-        await message.answer("❌ Please provide a more detailed response.")
+        await message.answer("❌ Give us a bit more context.")
         return
     await state.update_data(motivation=message.text.strip())
     await state.set_state(InvestorForm.investment_scope)
     await message.answer(
-        f"💰 *Investor Application* {_p(2)}\n\n"
-        "Are you interested in participating in *fundraising rounds for projects* within the Kraven ecosystem, "
-        "or solely in *Kraven itself*?",
+        f"💰 {_p(2)}\n\nAre you looking to invest in *Kraven directly*, "
+        "in *projects within the Kraven ecosystem*, or *both*?",
         parse_mode="Markdown",
         reply_markup=investment_scope_keyboard()
     )
@@ -54,9 +54,7 @@ async def inv_step2(callback: CallbackQuery, state: FSMContext):
     await state.update_data(investment_scope=scope)
     await state.set_state(InvestorForm.full_name)
     await callback.message.edit_text(
-        f"✅ Scope: *{scope}*\n\n"
-        f"💰 *Investor Application* {_p(3)}\n\n"
-        "What is your *full name*?",
+        f"💰 {_p(3)}\n\nYour *full name*?",
         parse_mode="Markdown"
     )
 
@@ -66,7 +64,7 @@ async def inv_step3(message: Message, state: FSMContext):
     await state.update_data(full_name=message.text.strip())
     await state.set_state(InvestorForm.email)
     await message.answer(
-        f"💰 *Investor Application* {_p(4)}\n\nWhat is your *contact email address*?",
+        f"💰 {_p(4)}\n\nBest *email address* to reach you?",
         parse_mode="Markdown"
     )
 
@@ -79,7 +77,7 @@ async def inv_step4(message: Message, state: FSMContext):
     await state.update_data(email=message.text.strip().lower())
     await state.set_state(InvestorForm.country)
     await message.answer(
-        f"💰 *Investor Application* {_p(5)}\n\nWhat is your *country of residence*?",
+        f"💰 {_p(5)}\n\n*Country of residence*?",
         parse_mode="Markdown"
     )
 
@@ -89,9 +87,8 @@ async def inv_step5(message: Message, state: FSMContext):
     await state.update_data(country=message.text.strip())
     await state.set_state(InvestorForm.invest_experience)
     await message.answer(
-        f"💰 *Investor Application* {_p(6)}\n\n"
-        "Describe your *investment experience*.\n"
-        "_(e.g. years in crypto investing, notable portfolios, prior rounds participated in)_",
+        f"💰 {_p(6)}\n\nTell us about your *investment background*.\n"
+        "_(Rounds you've participated in, notable portfolio projects, years active, etc.)_",
         parse_mode="Markdown"
     )
 
@@ -101,7 +98,7 @@ async def inv_step6(message: Message, state: FSMContext):
     await state.update_data(invest_experience=message.text.strip())
     await state.set_state(InvestorForm.invest_size)
     await message.answer(
-        f"💰 *Investor Application* {_p(7)}\n\nWhat is your *preferred investment size / range*?",
+        f"💰 {_p(7)}\n\nWhat's your *typical investment size*?",
         parse_mode="Markdown",
         reply_markup=invest_size_keyboard()
     )
@@ -113,10 +110,9 @@ async def inv_step7(callback: CallbackQuery, state: FSMContext):
     await state.update_data(invest_size=size)
     await state.set_state(InvestorForm.specific_questions)
     await callback.message.edit_text(
-        f"✅ Investment Range: *{size}*\n\n"
-        f"💰 *Investor Application* {_p(8)}\n\n"
-        "Do you have any *specific questions or areas of interest* regarding Kraven's financials or roadmap?\n\n"
-        "_(Type 'None' if not applicable)_",
+        f"💰 {_p(8)}\n\n"
+        "Anything specific you want to know about *Kraven's financials, roadmap, or tokenomics* "
+        "before we connect?\n\n_(Type 'None' if you're good for now)_",
         parse_mode="Markdown"
     )
 
@@ -128,16 +124,17 @@ async def inv_step8(message: Message, state: FSMContext):
     await state.set_state(InvestorForm.confirm)
 
     summary = (
-        "📋 *Review Your Investor Application*\n\n"
+        "📋 *Your investor profile:*\n\n"
         f"👤 Name: {data['full_name']}\n"
         f"📧 Email: {data['email']}\n"
         f"🌍 Country: {data['country']}\n"
         f"🎯 Scope: {data['investment_scope']}\n"
-        f"💰 Preferred Size: {data['invest_size']}\n\n"
-        f"💡 *Motivation:*\n_{data['motivation']}_\n\n"
-        f"📊 *Experience:*\n_{data['invest_experience']}_\n\n"
-        f"❓ *Specific Questions:*\n_{data['specific_questions']}_\n\n"
-        "━━━━━━━━━━━━━━━━━━━━\nReady to submit?"
+        f"💰 Ticket Size: {data['invest_size']}\n\n"
+        f"💡 *Thesis:*\n_{data['motivation']}_\n\n"
+        f"📊 *Background:*\n_{data['invest_experience']}_\n\n"
+        f"❓ *Questions:*\n_{data['specific_questions']}_\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Submit and we'll be in touch to set up a call. 🤝"
     )
     await message.answer(summary, parse_mode="Markdown", reply_markup=confirm_keyboard())
 
@@ -146,7 +143,7 @@ async def inv_step8(message: Message, state: FSMContext):
 async def inv_confirm(callback: CallbackQuery, state: FSMContext):
     if callback.data == "confirm:no":
         await state.clear()
-        await callback.message.edit_text("🗑 Application cancelled.", reply_markup=main_menu())
+        await callback.message.edit_text("🗑 Submission cancelled.", reply_markup=main_menu())
         return
 
     data = await state.get_data()
@@ -156,9 +153,9 @@ async def inv_confirm(callback: CallbackQuery, state: FSMContext):
     await state.clear()
 
     await callback.message.edit_text(
-        "🎉 *Investor Application Submitted!*\n\n"
-        "Thank you for your interest in Kraven. A member of our team will be in touch with you at your provided email address.\n\n"
-        "_We look forward to exploring this opportunity together._",
+        "✅ *We've got your details.*\n\n"
+        "A member of the Kraven team will reach out to your email to schedule a conversation.\n\n"
+        "_We're building something worth backing — and we appreciate the interest._",
         parse_mode="Markdown",
         reply_markup=main_menu()
     )

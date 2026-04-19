@@ -7,15 +7,17 @@ from keyboards.menus import main_menu, kol_menu, support_menu
 router = Router()
 
 WELCOME = """
-👋 *Welcome to Kraven Bot!*
+⚡ *Welcome to Kraven.*
 
-I'm here to guide you through Kraven's engagement opportunities — whether you're a creator, a project, an investor, or a potential partner.
+Where creators get campaigns. Projects get distribution. Deals get done.
 
 ━━━━━━━━━━━━━━━━━━━━
-*What would you like to do today?*
+Kraven connects elite KOLs, high-growth projects, and strategic investors into one ecosystem built for *real impact* — not vanity metrics.
+
+Whether you're here to *run campaigns*, *grow your project*, *invest*, or *partner up* — you're in the right place.
 ━━━━━━━━━━━━━━━━━━━━
 
-Select a category below 👇
+*Who are you?* 👇
 """
 
 
@@ -34,9 +36,12 @@ async def back_to_menu(callback: CallbackQuery):
 @router.callback_query(F.data == "cat:kol")
 async def cat_kol(callback: CallbackQuery):
     await callback.message.edit_text(
-        "🎤 *Key Opinion Leader (KOL)*\n\n"
-        "Join Kraven's creator network and gain access to exclusive campaigns, "
-        "networking events, and brand deals.\n\nWhat would you like to do?",
+        "🎤 *Kraven KOL Network*\n\n"
+        "Stop chasing brands. Let them come to you.\n\n"
+        "Kraven's KOL network plugs you directly into *paid UGC campaigns*, "
+        "*KOL deals*, *engagement groups*, and a community of creators who are "
+        "actually moving the needle in Web3 and beyond.\n\n"
+        "What do you want to do?",
         parse_mode="Markdown",
         reply_markup=kol_menu()
     )
@@ -45,12 +50,9 @@ async def cat_kol(callback: CallbackQuery):
 @router.callback_query(F.data == "cat:support")
 async def cat_support(callback: CallbackQuery):
     await callback.message.edit_text(
-        "💬 *General Inquiry / Support*\n\n"
-        "Need help or have a question? We've got you covered.",
+        "💬 *Support*\n\n"
+        "Got a question? Something not working? We've got you.\n\n"
+        "Open a ticket and our team will get back to you ASAP.",
         parse_mode="Markdown",
         reply_markup=support_menu()
     )
-
-
-# cat:project, cat:investor, cat:partner are handled directly in their
-# respective handler files via their own routers.
