@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 
-from config import ADMIN_IDS
+from config import ADMIN_IDS   # ← fixed
 from states.forms import AdminNote
 from keyboards.menus import admin_main_menu, admin_review_keyboard, close_ticket_keyboard
 from database.db import (
