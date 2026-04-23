@@ -4,8 +4,9 @@ from aiogram.fsm.context import FSMContext
 
 from states.forms import ProjectForm
 from keyboards.menus import (
-    project_category_keyboard, services_keyboard, budget_keyboard,
-    tenure_keyboard, confirm_keyboard, main_menu, SERVICES
+    project_category_keyboard, service_layer_keyboard, services_keyboard, 
+    service_info_keyboard, post_service_choice_keyboard,
+    budget_keyboard, tenure_keyboard, confirm_keyboard, main_menu, SERVICES
 )
 from database.db import insert_project
 from utils import is_valid_email, is_valid_url
@@ -101,49 +102,142 @@ async def proj_step6(message: Message, state: FSMContext):
 @router.callback_query(ProjectForm.project_category, F.data.startswith("pcat:"))
 async def proj_step7(callback: CallbackQuery, state: FSMContext):
     cat = callback.data.split(":", 1)[1]
-    await state.update_data(project_category=cat, services_selected=set())
+    await state.update_data(project_category=cat, services_selected=set(), current_layer=None)
     await state.set_state(ProjectForm.services)
     await callback.message.edit_text(
         f"🏢 {_p(8)}\n\n"
-        "*What does your project need?*\n\n"
-        "Select everything that applies — tap to toggle, then hit *Done*.\n\n"
-        "📡 *Distribution Infrastructure*\n"
-        "Mass Awareness · Sustainable Distribution · Content Clipping · Krending · Ultimatum\n\n"
-        "🛠 *Supportive Infrastructure*\n"
-        "Website Development · X Social Traction",
+        "*What service are you looking for?*\n\n"
+        "Kraven offers specialized solutions across two main infrastructure layers. "
+        "Select a layer to view specific services, then hit *Done* when finished.",
         parse_mode="Markdown",
-        reply_markup=services_keyboard(set())
+        reply_markup=service_layer_keyboard()
+    )
+
+
+@router.callback_query(ProjectForm.services, F.data.startswith("layer:"))
+async def proj_services_layer(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    selected = data.get("services_selected", set())
+    
+    if callback.data == "layer:back":
+        await state.update_data(current_layer=None)
+        await callback.message.edit_text(
+            f"🏢 {_p(8)}\n\n"
+            "*What service are you looking for?*\n\n"
+            "Select a layer to view specific services, then hit *Done* when finished.",
+            parse_mode="Markdown",
+            reply_markup=service_layer_keyboard()
+        )
+        return
+
+    layer = callback.data.split(":", 1)[1]
+    if layer == "stay":
+        layer = data.get("current_layer", "dist")
+    else:
+        await state.update_data(current_layer=layer)
+    
+    layer_name = "📡 Distribution Infra Layer" if layer == "dist" else "🛠 Supportive Infra Layer"
+    await callback.message.edit_text(
+        f"🏢 {_p(8)}\n\n"
+        f"*{layer_name}*\n\n"
+        "Tap a service to learn more and select it.",
+        parse_mode="Markdown",
+        reply_markup=services_keyboard(layer, selected)
+    )
+
+
+@router.callback_query(ProjectForm.services, F.data.startswith("info:"))
+async def proj_service_info(callback: CallbackQuery, state: FSMContext):
+    service_id = callback.data.split(":", 1)[1]
+    service_data = SERVICES.get(service_id, {})
+    
+    data = await state.get_data()
+    selected = data.get("services_selected", set())
+    is_selected = service_id in selected
+    
+    text = (
+        f"*{service_data.get('label', 'Service Info')}*\n\n"
+        f"{service_data.get('desc', 'No description available.')}"
+    )
+    
+    await callback.message.edit_text(
+        text,
+        parse_mode="Markdown",
+        reply_markup=service_info_keyboard(service_id, is_selected)
     )
 
 
 @router.callback_query(ProjectForm.services, F.data.startswith("svc:"))
 async def proj_services_toggle(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    selected: set = data.get("services_selected", set())
+    current_layer = data.get("current_layer", "dist")
+
     if callback.data == "svc:done":
-        data = await state.get_data()
-        selected = data.get("services_selected", set())
         if not selected:
             await callback.answer("⚠️ Pick at least one service.", show_alert=True)
             return
-        labels = [SERVICES[s] for s in selected if s in SERVICES]
-        await state.update_data(services_display="\n  • ".join(labels))
-        await state.set_state(ProjectForm.budget_range)
+        
         await callback.message.edit_text(
-            f"✅ *{len(selected)} service(s) locked in.*\n\n"
-            f"🏢 {_p(9)}\n\nWhat's your *budget range* for this campaign?",
+            "🔥 *Excellent choice.*\n\n"
+            "How would you like to proceed? You can fill out our briefing form "
+            "right now, or book a direct strategy call with our team.",
             parse_mode="Markdown",
-            reply_markup=budget_keyboard()
+            reply_markup=post_service_choice_keyboard()
         )
         return
 
-    data = await state.get_data()
-    selected: set = data.get("services_selected", set())
-    if callback.data in selected:
-        selected.discard(callback.data)
+    service_id = callback.data.split(":", 1)[1]
+    if service_id in selected:
+        selected.discard(service_id)
+        await callback.answer("❌ Service removed.")
     else:
-        selected.add(callback.data)
+        selected.add(service_id)
+        await callback.answer("✅ Service selected.")
+    
     await state.update_data(services_selected=selected)
-    await callback.message.edit_reply_markup(reply_markup=services_keyboard(selected))
-    await callback.answer()
+    
+    # After toggling, go back to the list
+    layer_name = "📡 Distribution Infra Layer" if current_layer == "dist" else "🛠 Supportive Infra Layer"
+    await callback.message.edit_text(
+        f"🏢 {_p(8)}\n\n"
+        f"*{layer_name}*\n\n"
+        "Tap a service to learn more and select it.",
+        parse_mode="Markdown",
+        reply_markup=services_keyboard(current_layer, selected)
+    )
+
+
+@router.callback_query(ProjectForm.services, F.data.startswith("choice:"))
+async def proj_post_service_choice(callback: CallbackQuery, state: FSMContext):
+    choice = callback.data.split(":", 1)[1]
+    
+    if choice == "call":
+        await callback.message.edit_text(
+            "📅 *Book a Strategy Call*\n\n"
+            "Ready to talk shop? Book a 15-minute intro call with our team to "
+            "discuss your project and how we can help you scale.\n\n"
+            "🔗 [Book your call here](https://calendly.com/kraven-hq)\n\n"
+            "Once you've booked, you can also complete the form to give us more "
+            "context beforehand!",
+            parse_mode="Markdown",
+            reply_markup=post_service_choice_keyboard()
+        )
+        return
+
+    # choice == "form" -> proceed to budget
+    data = await state.get_data()
+    selected = data.get("services_selected", set())
+    labels = [SERVICES[s]["label"] for s in selected if s in SERVICES]
+    await state.update_data(services_display="\n  • ".join(labels))
+    
+    await state.set_state(ProjectForm.budget_range)
+    await callback.message.edit_text(
+        f"✅ *{len(selected)} service(s) locked in.*\n\n"
+        f"🏢 {_p(9)}\n\nWhat's your *budget range* for this campaign?",
+        parse_mode="Markdown",
+        reply_markup=budget_keyboard()
+    )
 
 
 @router.callback_query(ProjectForm.budget_range, F.data.startswith("budget:"))

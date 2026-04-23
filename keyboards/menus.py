@@ -49,23 +49,83 @@ def project_category_keyboard() -> InlineKeyboardMarkup:
 # ─── Services (multi-select) ───────────────────────────────────────────────────
 
 SERVICES = {
-    "svc:mass_awareness":    "📡 Mass Awareness Campaigns",
-    "svc:sustainable_dist":  "♻️ Sustainable Distribution",
-    "svc:content_clipping":  "✂️ Content Clipping Services",
-    "svc:krending":          "📈 Krending (Trend Amplification)",
-    "svc:ultimatum":         "💥 Ultimatum (High-Impact Marketing)",
-    "svc:web_dev":           "🌐 Website Development",
-    "svc:x_traction":        "🐦 X Social Traction Enhancement",
+    "svc:mass_awareness": {
+        "label": "📡 Mass Awareness Campaigns",
+        "desc": "Get your project in front of millions. We leverage our elite KOL network to create massive visibility and brand recognition across all major social platforms."
+    },
+    "svc:sustainable_dist": {
+        "label": "♻️ Sustainable Distribution",
+        "desc": "Long-term growth over short-term hype. We build sustainable distribution channels that keep your project relevant and growing month after month."
+    },
+    "svc:content_clipping": {
+        "label": "✂️ Content Clipping Services",
+        "desc": "Turn long-form content into viral gold. Our editors craft high-engagement short-form clips optimized for TikTok, Reels, and X to maximize your reach."
+    },
+    "svc:krending": {
+        "label": "📈 Krending (Trend Amplification)",
+        "desc": "We don't just follow trends; we create them. Use our proprietary Krending strategy to amplify your message and dominate the social conversation."
+    },
+    "svc:ultimatum": {
+        "label": "💥 Ultimatum (High-Impact Marketing)",
+        "desc": "The nuclear option for project launches or major updates. A concentrated burst of high-impact marketing designed to move the market instantly."
+    },
+    "svc:web_dev": {
+        "label": "🌐 Website Development",
+        "desc": "High-converting, performance-optimized websites built for the modern Web3 ecosystem. From landing pages to complex dApps."
+    },
+    "svc:x_traction": {
+        "label": "🐦 X Social Traction Enhancement",
+        "desc": "Dominate X (Twitter). We boost your social presence, engagement, and follower growth through strategic content and network amplification."
+    },
 }
 
+DISTRIBUTION_SERVICES = [
+    "svc:mass_awareness", "svc:sustainable_dist", "svc:content_clipping", 
+    "svc:krending", "svc:ultimatum"
+]
 
-def services_keyboard(selected: set) -> InlineKeyboardMarkup:
+SUPPORTIVE_SERVICES = [
+    "svc:web_dev", "svc:x_traction"
+]
+
+
+def service_layer_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [btn("📡 Distribution Infra Layer", "layer:dist")],
+        [btn("🛠 Supportive Infra Layer",   "layer:supp")],
+        [btn("✔️  Done — Confirm Selection", "svc:done")]
+    ])
+
+
+def services_keyboard(layer: str, selected: set) -> InlineKeyboardMarkup:
     rows = []
-    for data, label in SERVICES.items():
+    service_list = DISTRIBUTION_SERVICES if layer == "dist" else SUPPORTIVE_SERVICES
+    
+    for data in service_list:
+        service_info = SERVICES.get(data, {})
+        label = service_info.get("label", data)
         tick = "✅ " if data in selected else ""
-        rows.append([btn(f"{tick}{label}", data)])
-    rows.append([btn("✔️  Done — Confirm Selection", "svc:done")])
+        # Use info: prefix to show info first
+        rows.append([btn(f"{tick}{label}", f"info:{data}")])
+    
+    rows.append([btn("⬅️ Back to Layers", "layer:back")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def service_info_keyboard(service_id: str, is_selected: bool) -> InlineKeyboardMarkup:
+    toggle_text = "❌ Unselect Service" if is_selected else "✅ Select Service"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [btn(toggle_text, f"svc:{service_id}")],
+        [btn("⬅️ Back to List", "layer:stay")]
+    ])
+
+
+def post_service_choice_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [btn("📝 Fill the Briefing Form", "choice:form")],
+        [btn("📅 Book a Strategy Call",   "choice:call")],
+        [btn("⬅️ Back to Services",      "layer:back")]
+    ])
 
 
 # ─── Budget ────────────────────────────────────────────────────────────────────
